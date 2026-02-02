@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clover Marketing Analytics Dashboard</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; line-height: 1.6; }
+        .header { background: linear-gradient(135deg, #1a73e8, #4285f4); color: white; padding: 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        /* Date Controls */
+        .date-controls { background: white; padding: 20px; border-radius: 12px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .date-input-group { display: flex; flex-direction: column; gap: 8px; }
+        .date-input-group label { font-size: 12px; color: #5f6368; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .date-input-group input { padding: 10px; border: 2px solid #e8eaed; border-radius: 8px; font-size: 14px; transition: border-color 0.2s; }
+        .date-input-group input:focus { outline: none; border-color: #1a73e8; }
+        .quick-dates { display: flex; gap: 10px; flex-wrap: wrap; }
+        .quick-date-btn { padding: 8px 16px; border: 1px solid #dadce0; background: white; border-radius: 20px; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .quick-date-btn:hover, .quick-date-btn.active { background: #1a73e8; color: white; border-color: #1a73e8; }
+        .compare-toggle { padding: 10px 20px; background: #34a853; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.2s; }
+        .compare-toggle:hover { background: #2e7d32; transform: translateY(-1px); }
+        .compare-toggle.comparing { background: #ea4335; }
+        
+        /* Metrics Row */
+        .metrics-row { display: flex; gap: 15px; margin: 20px 0; overflow-x: auto; padding: 10px 0; }
+        .metric-card { 
+            background: white; 
+            border-radius: 12px; 
+            padding: 20px; 
+            min-width: 180px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08); 
+            transition: transform 0.2s; 
+            flex-shrink: 0;
+            border-left: 4px solid #1a73e8;
+        }
+        .metric-card:hover { transform: translateY(-2px); }
+        .metric-title { font-size: 12px; color: #5f6368; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 500; }
+        .metric-value { font-size: 24px; font-weight: 700; color: #202124; margin-bottom: 5px; }
+        .metric-change { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+        .metric-change.positive { color: #34a853; }
+        .metric-change.negative { color: #ea4335; }
+        .metric-change.neutral { color: #5f6368; }
+        
+        /* Charts Section */
+        .charts-section { background: white; border-radius: 12px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .chart-container { height: 400px; margin: 20px 0; }
+        .chart-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #202124; }
+        
+        /* Tables */
+        .table-container { background: white; border-radius: 12px; margin: 20px 0; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .table-header { background: #f8f9fa; padding: 20px; border-bottom: 1px solid #e8eaed; }
+        .table-title { font-size: 18px; font-weight: 600; color: #202124; }
+        .data-table { width: 100%; }
+        .data-table th, .data-table td { padding: 15px; text-align: left; border-bottom: 1px solid #e8eaed; }
+        .data-table th { 
+            background: #f8f9fa; 
+            font-weight: 600; 
+            color: #5f6368; 
+            cursor: pointer; 
+            user-select: none; 
+            transition: background 0.2s;
+            position: relative;
+        }
+        .data-table th:hover { background: #e8eaed; }
+        .data-table th::after { 
+            content: '↕'; 
+            position: absolute; 
+            right: 10px; 
+            opacity: 0.5; 
+        }
+        .data-table th.sorted-asc::after { content: '↑'; opacity: 1; color: #1a73e8; }
+        .data-table th.sorted-desc::after { content: '↓'; opacity: 1; color: #1a73e8; }
+        .data-table tbody tr { cursor: pointer; transition: background 0.2s; }
+        .data-table tbody tr:hover { background: #f8f9fa; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { 
+            background-color: white; 
+            margin: 5% auto; 
+            padding: 0; 
+            border-radius: 12px; 
+            width: 90%; 
+            max-width: 800px; 
+            max-height: 80vh; 
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .modal-header { background: #1a73e8; color: white; padding: 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 20px; }
+        .close { color: white; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close:hover { opacity: 0.7; }
+        
+        /* Utility */
+        .loading { text-align: center; padding: 40px; color: #5f6368; }
+        .loading::after { content: '...'; animation: dots 1s infinite; }
+        @keyframes dots { 0%, 20% { color: rgba(0,0,0,0); text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); } 40% { color: #5f6368; text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); } 60% { text-shadow: .25em 0 0 #5f6368, .5em 0 0 rgba(0,0,0,0); } 80%, 100% { text-shadow: .25em 0 0 #5f6368, .5em 0 0 #5f6368; } }
+        .error { text-align: center; padding: 30px; color: #ea4335; background: #fce8e6; border-radius: 8px; margin: 20px 0; }
+        .last-updated { text-align: center; color: #5f6368; font-size: 12px; margin: 10px 0; }
+        
+        /* Real-time indicator */
+        .real-time-badge { 
+            background: #34a853; 
+            color: white; 
+            padding: 4px 8px; 
+            border-radius: 12px; 
+            font-size: 10px; 
+            font-weight: 500; 
+            margin-left: 10px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .metrics-row { flex-direction: column; }
+            .metric-card { min-width: auto; }
+            .date-controls { flex-direction: column; align-items: stretch; }
+            .quick-dates { justify-content: center; }
+            .container { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🍀 Clover Marketing Analytics</h1>
+        <p>Professional GA4 Dashboard with Real-Time Insights<span class="real-time-badge">LIVE</span></p>
+    </div>
+    
+    <div class="container">
+        <!-- Date Controls -->
+        <div class="date-controls">
+            <div class="date-input-group">
+                <label>Start Date</label>
+                <input type="date" id="startDate">
+            </div>
+            <div class="date-input-group">
+                <label>End Date</label>
+                <input type="date" id="endDate">
+            </div>
+            <div class="quick-dates">
+                <button class="quick-date-btn active" data-days="7">7 Days</button>
+                <button class="quick-date-btn" data-days="14">14 Days</button>
+                <button class="quick-date-btn" data-days="30">30 Days</button>
+                <button class="quick-date-btn" data-days="90">90 Days</button>
+            </div>
+            <button class="compare-toggle" id="compareToggle">Compare Period</button>
+        </div>
+        
+        <div class="last-updated" id="lastUpdated"></div>
+        
+        <!-- Key Metrics -->
+        <div id="metricsContainer" class="metrics-row">
+            <div class="loading">Loading real-time metrics</div>
+        </div>
+        
+        <!-- Charts -->
+        <div class="charts-section">
+            <div class="chart-title">Traffic Trends</div>
+            <div class="chart-container">
+                <canvas id="trafficChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Top Pages Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">Top Pages Performance</div>
+            </div>
+            <table class="data-table" id="pagesTable">
+                <thead>
+                    <tr>
+                        <th data-sort="page">Page</th>
+                        <th data-sort="pageviews">Page Views</th>
+                        <th data-sort="sessions">Sessions</th>
+                        <th data-sort="users">Users</th>
+                        <th data-sort="bounce_rate">Bounce Rate</th>
+                        <th data-sort="avg_duration">Avg. Duration</th>
+                    </tr>
+                </thead>
+                <tbody id="pagesTableBody">
+                    <tr><td colspan="6" class="loading">Loading page data</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Traffic Sources Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">Traffic Sources</div>
+            </div>
+            <table class="data-table" id="sourcesTable">
+                <thead>
+                    <tr>
+                        <th data-sort="source">Source</th>
+                        <th data-sort="medium">Medium</th>
+                        <th data-sort="sessions">Sessions</th>
+                        <th data-sort="users">Users</th>
+                        <th data-sort="pageviews">Page Views</th>
+                        <th data-sort="bounce_rate">Bounce Rate</th>
+                    </tr>
+                </thead>
+                <tbody id="sourcesTableBody">
+                    <tr><td colspan="6" class="loading">Loading traffic source data</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Page Details Modal -->
+    <div id="pageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalPageTitle">Page Analytics</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body" id="modalContent">
+                <div class="loading">Loading page details</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentData = null;
+        let isComparing = false;
+        let trafficChart = null;
+        let sortState = {};
+        
+        // Initialize date inputs
+        function initializeDates() {
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 7);
+            
+            document.getElementById('endDate').value = formatDate(endDate);
+            document.getElementById('startDate').value = formatDate(startDate);
+        }
+        
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+        
+        function parseDate(dateStr) {
+            // Fix date parsing to prevent Invalid_Date
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+        
+        function updateLastUpdated() {
+            document.getElementById('lastUpdated').textContent = 
+                `Last updated: ${new Date().toLocaleString()}`;
+        }
+        
+        // Load dashboard data
+        async function loadDashboard() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            try {
+                updateMetricsLoading();
+                updateTablesLoading();
+                
+                const response = await fetch(`/api/clover-dashboard?start=${startDate}&end=${endDate}&compare=${isComparing}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                currentData = await response.json();
+                
+                renderMetrics(currentData.metrics);
+                renderChart(currentData.chartData);
+                renderPagesTable(currentData.topPages);
+                renderSourcesTable(currentData.trafficSources);
+                
+                updateLastUpdated();
+            } catch (error) {
+                showError('❌ Error loading dashboard: ' + error.message);
+            }
+        }
+        
+        function updateMetricsLoading() {
+            document.getElementById('metricsContainer').innerHTML = '<div class="loading">Loading real-time metrics</div>';
+        }
+        
+        function updateTablesLoading() {
+            document.getElementById('pagesTableBody').innerHTML = '<tr><td colspan="6" class="loading">Loading data</td></tr>';
+            document.getElementById('sourcesTableBody').innerHTML = '<tr><td colspan="6" class="loading">Loading data</td></tr>';
+        }
+        
+        function renderMetrics(metrics) {
+            const container = document.getElementById('metricsContainer');
+            
+            const metricsHtml = metrics.map(metric => {
+                let changeHtml = '';
+                if (isComparing && metric.change !== undefined) {
+                    const changeClass = metric.change > 0 ? 'positive' : metric.change < 0 ? 'negative' : 'neutral';
+                    const arrow = metric.change > 0 ? '↗' : metric.change < 0 ? '↘' : '→';
+                    const changePercent = Math.abs(metric.change).toFixed(1);
+                    changeHtml = `<div class="metric-change ${changeClass}">
+                        ${arrow} ${changePercent}% (${metric.changeDiff > 0 ? '+' : ''}${metric.changeDiff.toLocaleString()})
+                    </div>`;
+                }
+                
+                return `
+                    <div class="metric-card">
+                        <div class="metric-title">${metric.title}</div>
+                        <div class="metric-value">${metric.value.toLocaleString()}</div>
+                        ${changeHtml}
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = metricsHtml;
+        }
+        
+        function renderChart(chartData) {
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            
+            if (trafficChart) {
+                trafficChart.destroy();
+            }
+            
+            // Fix date parsing for chart labels
+            const labels = chartData.labels.map(label => parseDate(label));
+            
+            const datasets = [{
+                label: 'Sessions',
+                data: chartData.sessions,
+                borderColor: '#1a73e8',
+                backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Page Views',
+                data: chartData.pageviews,
+                borderColor: '#34a853',
+                backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                fill: true,
+                tension: 0.4
+            }];
+            
+            if (isComparing && chartData.previousSessions) {
+                datasets.push({
+                    label: 'Previous Sessions',
+                    data: chartData.previousSessions,
+                    borderColor: '#ea4335',
+                    backgroundColor: 'rgba(234, 67, 53, 0.1)',
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.4
+                });
+            }
+            
+            trafficChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#e8eaed'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: '#e8eaed'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            backgroundColor: '#202124',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: '#dadce0',
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderPagesTable(pages) {
+            const tbody = document.getElementById('pagesTableBody');
+            
+            if (!pages || pages.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6">No page data available</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = pages.map(page => `
+                <tr data-page="${encodeURIComponent(page.page)}">
+                    <td title="${page.page}">${page.page.length > 50 ? page.page.substring(0, 50) + '...' : page.page}</td>
+                    <td>${page.pageviews.toLocaleString()}</td>
+                    <td>${page.sessions.toLocaleString()}</td>
+                    <td>${page.users.toLocaleString()}</td>
+                    <td>${(page.bounce_rate * 100).toFixed(1)}%</td>
+                    <td>${formatDuration(page.avg_duration)}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function renderSourcesTable(sources) {
+            const tbody = document.getElementById('sourcesTableBody');
+            
+            if (!sources || sources.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6">No traffic source data available</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = sources.map(source => `
+                <tr>
+                    <td>${source.source}</td>
+                    <td>${source.medium}</td>
+                    <td>${source.sessions.toLocaleString()}</td>
+                    <td>${source.users.toLocaleString()}</td>
+                    <td>${source.pageviews.toLocaleString()}</td>
+                    <td>${(source.bounce_rate * 100).toFixed(1)}%</td>
+                </tr>
+            `).join('');
+        }
+        
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        function showError(message) {
+            document.getElementById('metricsContainer').innerHTML = `<div class="error">${message}</div>`;
+        }
+        
+        // Table sorting
+        function sortTable(table, column, direction) {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            rows.sort((a, b) => {
+                const cellA = a.children[getColumnIndex(table, column)];
+                const cellB = b.children[getColumnIndex(table, column)];
+                
+                let valueA = cellA.textContent.trim();
+                let valueB = cellB.textContent.trim();
+                
+                // Handle numeric values
+                if (!isNaN(parseFloat(valueA.replace(/[,%]/g, '')))) {
+                    valueA = parseFloat(valueA.replace(/[,%]/g, ''));
+                    valueB = parseFloat(valueB.replace(/[,%]/g, ''));
+                }
+                
+                if (valueA < valueB) return direction === 'asc' ? -1 : 1;
+                if (valueA > valueB) return direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+        
+        function getColumnIndex(table, column) {
+            const headers = table.querySelectorAll('th[data-sort]');
+            for (let i = 0; i < headers.length; i++) {
+                if (headers[i].dataset.sort === column) return i;
+            }
+            return 0;
+        }
+        
+        // Page details modal
+        function showPageDetails(pagePath) {
+            const modal = document.getElementById('pageModal');
+            const modalTitle = document.getElementById('modalPageTitle');
+            const modalContent = document.getElementById('modalContent');
+            
+            modalTitle.textContent = `Analytics: ${pagePath}`;
+            modalContent.innerHTML = '<div class="loading">Loading detailed page analytics</div>';
+            modal.style.display = 'block';
+            
+            // Load page details (you can enhance this with actual API call)
+            setTimeout(() => {
+                modalContent.innerHTML = `
+                    <div class="metrics-row">
+                        <div class="metric-card">
+                            <div class="metric-title">Page Views</div>
+                            <div class="metric-value">12,543</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Unique Visitors</div>
+                            <div class="metric-value">8,432</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Avg. Time on Page</div>
+                            <div class="metric-value">2:34</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Bounce Rate</div>
+                            <div class="metric-value">34.2%</div>
+                        </div>
+                    </div>
+                    <p style="margin-top: 20px; color: #5f6368; text-align: center;">
+                        Detailed page analytics for: <strong>${pagePath}</strong>
+                    </p>
+                `;
+            }, 500);
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeDates();
+            loadDashboard();
+            
+            // Date controls
+            document.getElementById('startDate').addEventListener('change', loadDashboard);
+            document.getElementById('endDate').addEventListener('change', loadDashboard);
+            
+            // Quick date buttons
+            document.querySelectorAll('.quick-date-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.quick-date-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const days = parseInt(btn.dataset.days);
+                    const endDate = new Date();
+                    const startDate = new Date();
+                    startDate.setDate(startDate.getDate() - days);
+                    
+                    document.getElementById('endDate').value = formatDate(endDate);
+                    document.getElementById('startDate').value = formatDate(startDate);
+                    
+                    loadDashboard();
+                });
+            });
+            
+            // Compare toggle
+            document.getElementById('compareToggle').addEventListener('click', (e) => {
+                isComparing = !isComparing;
+                e.target.classList.toggle('comparing');
+                e.target.textContent = isComparing ? 'Stop Comparing' : 'Compare Period';
+                loadDashboard();
+            });
+            
+            // Table sorting
+            document.querySelectorAll('.data-table th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => {
+                    const table = th.closest('table');
+                    const column = th.dataset.sort;
+                    const currentSort = sortState[table.id];
+                    
+                    let direction = 'asc';
+                    if (currentSort && currentSort.column === column && currentSort.direction === 'asc') {
+                        direction = 'desc';
+                    }
+                    
+                    // Update header styles
+                    table.querySelectorAll('th').forEach(header => {
+                        header.classList.remove('sorted-asc', 'sorted-desc');
+                    });
+                    th.classList.add(direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                    
+                    sortState[table.id] = { column, direction };
+                    sortTable(table, column, direction);
+                });
+            });
+            
+            // Page details modal
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('#pagesTable tbody tr')) {
+                    const row = e.target.closest('tr');
+                    const pagePath = decodeURIComponent(row.dataset.page);
+                    if (pagePath && pagePath !== 'undefined') {
+                        showPageDetails(pagePath);
+                    }
+                }
+                
+                // Close modal
+                if (e.target.classList.contains('close') || e.target.classList.contains('modal')) {
+                    document.getElementById('pageModal').style.display = 'none';
+                }
+            });
+        });
+        
+        // Auto-refresh every 5 minutes
+        setInterval(loadDashboard, 300000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "clover-analytics-dashboard",
+  "version": "1.0.0",
+  "description": "Real-time GA4 & Search Console Dashboard for Clover Marketing",
+  "main": "api/index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'",
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "googleapis": "^139.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}

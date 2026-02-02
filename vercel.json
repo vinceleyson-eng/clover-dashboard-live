@@ -1,0 +1,19 @@
+{
+  "functions": {
+    "api/dashboard.js": {
+      "maxDuration": 30
+    },
+    "api/comparison.js": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+  ]
+}
