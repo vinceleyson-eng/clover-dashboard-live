@@ -26,20 +26,21 @@
         .compare-toggle.comparing { background: #ea4335; }
         
         /* Metrics Row */
-        .metrics-row { display: flex; gap: 15px; margin: 20px 0; overflow-x: auto; padding: 10px 0; }
+        .metrics-row { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; justify-content: space-between; }
         .metric-card { 
             background: white; 
             border-radius: 12px; 
-            padding: 20px; 
-            min-width: 180px; 
+            padding: 15px; 
+            min-width: 140px; 
+            flex: 1;
+            max-width: 200px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08); 
             transition: transform 0.2s; 
-            flex-shrink: 0;
             border-left: 4px solid #1a73e8;
         }
         .metric-card:hover { transform: translateY(-2px); }
         .metric-title { font-size: 12px; color: #5f6368; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 500; }
-        .metric-value { font-size: 24px; font-weight: 700; color: #202124; margin-bottom: 5px; }
+        .metric-value { font-size: 20px; font-weight: 700; color: #202124; margin-bottom: 5px; }
         .metric-change { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
         .metric-change.positive { color: #34a853; }
         .metric-change.negative { color: #ea4335; }
@@ -109,10 +110,15 @@
         }
         
         @media (max-width: 768px) {
-            .metrics-row { flex-direction: column; }
-            .metric-card { min-width: auto; }
+            .metrics-row { flex-direction: column; gap: 15px; }
+            .metric-card { min-width: auto; max-width: none; }
             .date-controls { flex-direction: column; align-items: stretch; }
             .quick-dates { justify-content: center; }
+        }
+        
+        @media (max-width: 1200px) {
+            .metric-card { min-width: 120px; max-width: 160px; }
+            .metrics-row { gap: 8px; }
         }
     </style>
 </head>
@@ -470,10 +476,17 @@
                 }
             }
             
-            // If no valid data, show error message
+            // If no valid data, use fallback labels
             if (validLabels.length === 0) {
-                ctx.fillText('Chart data unavailable', ctx.canvas.width / 2, ctx.canvas.height / 2);
-                return;
+                // Fallback: create simple labels
+                for (let i = 0; i < Math.min(chartData.labels.length, chartData.sessions.length); i++) {
+                    validLabels.push(`Day ${i + 1}`);
+                    validSessions.push(chartData.sessions[i] || 0);
+                    validPageviews.push(chartData.pageviews[i] || 0);
+                    if (isComparing && chartData.previousSessions) {
+                        validPreviousSessions.push(chartData.previousSessions[i] || 0);
+                    }
+                }
             }
             
             const datasets = [{
