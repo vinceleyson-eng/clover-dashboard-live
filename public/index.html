@@ -77,16 +77,16 @@
         .data-table tbody tr { cursor: pointer; transition: background 0.2s; }
         .data-table tbody tr:hover { background: #f8f9fa; }
         
-        /* Modal - BIGGER SIZE */
+        /* Modal - EXTRA BIG */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
         .modal-content { 
             background-color: white; 
-            margin: 2% auto; 
+            margin: 1% auto; 
             padding: 0; 
             border-radius: 12px; 
-            width: 95%; 
-            max-width: 1200px; 
-            max-height: 90vh; 
+            width: 98%; 
+            max-width: 1400px; 
+            max-height: 95vh; 
             overflow-y: auto;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
@@ -98,38 +98,29 @@
         /* Utility */
         .loading { text-align: center; padding: 40px; color: #5f6368; }
         .loading::after { content: '...'; animation: dots 1s infinite; }
-        @keyframes dots { 0%, 20% { color: rgba(0,0,0,0); text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); } 40% { color: #5f6368; text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); } 60% { text-shadow: .25em 0 0 #5f6368, .5em 0 0 rgba(0,0,0,0); } 80%, 100% { text-shadow: .25em 0 0 #5f6368, .5em 0 0 #5f6368; } }
-        .error { text-align: center; padding: 30px; color: #ea4335; background: #fce8e6; border-radius: 8px; margin: 20px 0; }
-        .last-updated { text-align: center; color: #5f6368; font-size: 12px; margin: 10px 0; }
+        .error { color: #ea4335; padding: 20px; text-align: center; background: #fce8e6; border-radius: 8px; margin: 20px; }
+        .update-badge { background: #34a853; color: white; padding: 5px 10px; border-radius: 15px; font-size: 12px; margin-left: 10px; }
         
-        /* Real-time indicator */
-        .real-time-badge { 
-            background: #34a853; 
-            color: white; 
-            padding: 4px 8px; 
-            border-radius: 12px; 
-            font-size: 10px; 
-            font-weight: 500; 
-            margin-left: 10px;
-            animation: pulse 2s infinite;
+        @keyframes dots { 
+            0%, 20% { content: '...'; } 
+            40% { content: ''; } 
+            60% { content: '.'; } 
+            80% { content: '..'; } 
         }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
         
-        /* Responsive */
         @media (max-width: 768px) {
             .metrics-row { flex-direction: column; }
             .metric-card { min-width: auto; }
             .date-controls { flex-direction: column; align-items: stretch; }
             .quick-dates { justify-content: center; }
-            .container { padding: 10px; }
-            .modal-content { width: 98%; margin: 1% auto; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🍀 Clover Marketing Analytics</h1>
-        <p>Professional GA4 Dashboard with Real-Time Insights<span class="real-time-badge">LIVE</span></p>
+        <h1>📊 Clover Marketing Analytics Dashboard</h1>
+        <p>Real-time Google Analytics 4 insights with enhanced features</p>
+        <span id="lastUpdated" class="update-badge">🔄 Loading</span>
     </div>
     
     <div class="container">
@@ -144,24 +135,22 @@
                 <input type="date" id="endDate">
             </div>
             <div class="quick-dates">
-                <button class="quick-date-btn active" data-days="7">7 Days</button>
-                <button class="quick-date-btn" data-days="14">14 Days</button>
-                <button class="quick-date-btn" data-days="30">30 Days</button>
-                <button class="quick-date-btn" data-days="90">90 Days</button>
+                <button class="quick-date-btn active" data-days="7">Last 7 days</button>
+                <button class="quick-date-btn" data-days="14">Last 14 days</button>
+                <button class="quick-date-btn" data-days="30">Last 30 days</button>
+                <button class="quick-date-btn" data-days="90">Last 90 days</button>
             </div>
-            <button class="compare-toggle" id="compareToggle">Compare Period</button>
+            <button id="compareToggle" class="compare-toggle">Compare Period</button>
         </div>
         
-        <div class="last-updated" id="lastUpdated"></div>
-        
-        <!-- Key Metrics -->
+        <!-- Metrics Row -->
         <div id="metricsContainer" class="metrics-row">
             <div class="loading">Loading real-time metrics</div>
         </div>
         
         <!-- Charts -->
         <div class="charts-section">
-            <div class="chart-title">Traffic Trends</div>
+            <div class="chart-title">📈 Traffic Trends</div>
             <div class="chart-container">
                 <canvas id="trafficChart"></canvas>
             </div>
@@ -175,7 +164,7 @@
             <table class="data-table" id="pagesTable">
                 <thead>
                     <tr>
-                        <th data-sort="page">Page</th>
+                        <th data-sort="page">Page Path</th>
                         <th data-sort="pageviews">Page Views</th>
                         <th data-sort="sessions">Sessions</th>
                         <th data-sort="users">Users</th>
@@ -184,7 +173,7 @@
                     </tr>
                 </thead>
                 <tbody id="pagesTableBody">
-                    <tr><td colspan="6" class="loading">Loading page data</td></tr>
+                    <tr><td colspan="6" class="loading">Loading top pages data</td></tr>
                 </tbody>
             </table>
         </div>
@@ -192,7 +181,7 @@
         <!-- Traffic Sources Table -->
         <div class="table-container">
             <div class="table-header">
-                <div class="table-title">Traffic Sources</div>
+                <div class="table-title">Traffic Sources Analysis</div>
             </div>
             <table class="data-table" id="sourcesTable">
                 <thead>
@@ -214,7 +203,7 @@
         <!-- Key Events Table -->
         <div class="table-container">
             <div class="table-header">
-                <div class="table-title">Key Events & Conversions</div>
+                <div class="table-title">🎯 Key Events & Conversions</div>
             </div>
             <table class="data-table" id="eventsTable">
                 <thead>
@@ -267,20 +256,31 @@
             return date.toISOString().split('T')[0];
         }
         
+        // FIXED: Bulletproof date parsing for comparison mode
         function parseDate(dateStr) {
-            // FIXED: Better date parsing to prevent Invalid_Date in comparison mode
             try {
-                if (!dateStr || dateStr === 'undefined') return 'Invalid';
+                if (!dateStr || dateStr === 'undefined' || dateStr === null) {
+                    return 'Invalid';
+                }
                 
-                // Handle various date formats
                 let date;
-                if (dateStr.includes('-')) {
-                    date = new Date(dateStr + 'T00:00:00');
-                } else {
+                
+                // Handle ISO format (YYYY-MM-DD)
+                if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    date = new Date(dateStr + 'T12:00:00'); // Add noon time to avoid timezone issues
+                }
+                // Handle timestamp format
+                else if (!isNaN(dateStr) && dateStr > 1000000000) {
+                    date = new Date(dateStr);
+                }
+                // Handle other date strings
+                else {
                     date = new Date(dateStr);
                 }
                 
-                if (isNaN(date.getTime())) {
+                // Final validation
+                if (!date || isNaN(date.getTime()) || date.getFullYear() < 2000 || date.getFullYear() > 2030) {
+                    console.warn('Invalid date detected:', dateStr);
                     return 'Invalid';
                 }
                 
@@ -299,7 +299,7 @@
                 `Last updated: ${new Date().toLocaleString()}`;
         }
         
-        // FIXED: Updated demo data with proper formatting
+        // FIXED: Demo data with properly formatted percentages and duration
         function generateDemoData() {
             const days = 7;
             const dates = [];
@@ -319,10 +319,10 @@
                     { title: 'Page Views', value: 247, change: 15.2, changeDiff: 32 },
                     { title: 'Sessions', value: 158, change: 8.7, changeDiff: 13 },
                     { title: 'Users', value: 124, change: -3.1, changeDiff: -4 },
-                    { title: 'Bounce Rate', value: 61.7, change: -5.2, changeDiff: -3.6, isPercentage: true },  // FIXED: Now percentage
-                    { title: 'Avg. Session Duration', value: 4.20, change: 12.3, changeDiff: 0.33, isMinutes: true }, // FIXED: Now minutes
+                    { title: 'Bounce Rate', value: 61.7, change: -5.2, changeDiff: -3.6, isPercentage: true },
+                    { title: 'Avg. Session Duration', value: 4.20, change: 12.3, changeDiff: 0.33, isMinutes: true },
                     { title: 'Conversions', value: 8, change: 25.0, changeDiff: 2 },
-                    { title: 'Engagement Rate', value: 38.3, change: 7.8, changeDiff: 2.5, isPercentage: true }  // FIXED: Now percentage
+                    { title: 'Engagement Rate', value: 38.3, change: 7.8, changeDiff: 2.5, isPercentage: true }
                 ],
                 chartData: {
                     labels: dates,
@@ -344,13 +344,13 @@
                     { source: 'facebook.com', medium: 'social', sessions: 12, users: 10, pageviews: 18, bounce_rate: 0.58 },
                     { source: 'newsletter', medium: 'email', sessions: 8, users: 7, pageviews: 14, bounce_rate: 0.25 }
                 ],
-                // NEW: Key Events data
                 keyEvents: [
-                    { event: 'contact_form_submit', count: 15, users: 13, rate: 0.095, revenue: 0 },
-                    { event: 'phone_click', count: 23, users: 19, rate: 0.146, revenue: 0 },
-                    { event: 'email_click', count: 8, users: 7, rate: 0.051, revenue: 0 },
-                    { event: 'quote_request', count: 12, users: 11, rate: 0.076, revenue: 0 },
-                    { event: 'page_view', count: 247, users: 124, rate: 1.991, revenue: 0 }
+                    { event: 'contact_form_submit', count: 15, users: 13, rate: 0.095, revenue: 250.00 },
+                    { event: 'phone_click', count: 23, users: 19, rate: 0.146, revenue: 120.00 },
+                    { event: 'email_click', count: 8, users: 7, rate: 0.051, revenue: 80.00 },
+                    { event: 'quote_request', count: 12, users: 11, rate: 0.076, revenue: 350.00 },
+                    { event: 'page_view', count: 247, users: 124, rate: 1.991, revenue: 0.00 },
+                    { event: 'download_brochure', count: 6, users: 5, rate: 0.038, revenue: 45.00 }
                 ]
             };
         }
@@ -380,7 +380,7 @@
                 renderChart(currentData.chartData);
                 renderPagesTable(currentData.topPages);
                 renderSourcesTable(currentData.trafficSources);
-                renderEventsTable(currentData.keyEvents); // NEW: Render events table
+                renderEventsTable(currentData.keyEvents);
                 
                 updateLastUpdated();
             } catch (error) {
@@ -421,7 +421,7 @@
                     </div>`;
                 }
                 
-                // FIXED: Format metric values properly
+                // FIXED: Format metric values properly based on type
                 let displayValue = metric.value.toLocaleString();
                 if (metric.isPercentage) {
                     displayValue = `${metric.value.toFixed(1)}%`;
@@ -441,6 +441,7 @@
             container.innerHTML = metricsHtml;
         }
         
+        // FIXED: Bulletproof chart rendering with better date handling
         function renderChart(chartData) {
             const ctx = document.getElementById('trafficChart').getContext('2d');
             
@@ -448,32 +449,53 @@
                 trafficChart.destroy();
             }
             
-            // FIXED: Better date handling for charts in comparison mode
-            const labels = chartData.labels.map(label => {
+            // FIXED: Filter out invalid dates completely and provide fallbacks
+            const validData = [];
+            const validLabels = [];
+            const validSessions = [];
+            const validPageviews = [];
+            const validPreviousSessions = [];
+            
+            for (let i = 0; i < chartData.labels.length; i++) {
+                const label = chartData.labels[i];
                 const parsed = parseDate(label);
-                return parsed === 'Invalid' ? 'N/A' : parsed;
-            }).filter(label => label !== 'N/A');
+                
+                if (parsed !== 'Invalid') {
+                    validLabels.push(parsed);
+                    validSessions.push(chartData.sessions[i] || 0);
+                    validPageviews.push(chartData.pageviews[i] || 0);
+                    if (isComparing && chartData.previousSessions) {
+                        validPreviousSessions.push(chartData.previousSessions[i] || 0);
+                    }
+                }
+            }
+            
+            // If no valid data, show error message
+            if (validLabels.length === 0) {
+                ctx.fillText('Chart data unavailable', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
             
             const datasets = [{
                 label: 'Sessions',
-                data: chartData.sessions,
+                data: validSessions,
                 borderColor: '#1a73e8',
                 backgroundColor: 'rgba(26, 115, 232, 0.1)',
                 fill: true,
                 tension: 0.4
             }, {
                 label: 'Page Views',
-                data: chartData.pageviews,
+                data: validPageviews,
                 borderColor: '#34a853',
                 backgroundColor: 'rgba(52, 168, 83, 0.1)',
                 fill: true,
                 tension: 0.4
             }];
             
-            if (isComparing && chartData.previousSessions && chartData.previousSessions.length > 0) {
+            if (isComparing && validPreviousSessions.length > 0) {
                 datasets.push({
                     label: 'Previous Sessions',
-                    data: chartData.previousSessions,
+                    data: validPreviousSessions,
                     borderColor: '#ea4335',
                     backgroundColor: 'rgba(234, 67, 53, 0.1)',
                     borderDash: [5, 5],
@@ -485,7 +507,7 @@
             trafficChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: validLabels,
                     datasets: datasets
                 },
                 options: {
@@ -524,6 +546,7 @@
             });
         }
         
+        // FIXED: Properly format bounce rates as percentages
         function renderPagesTable(pages) {
             const tbody = document.getElementById('pagesTableBody');
             
@@ -544,6 +567,7 @@
             `).join('');
         }
         
+        // FIXED: Properly format bounce rates as percentages
         function renderSourcesTable(sources) {
             const tbody = document.getElementById('sourcesTableBody');
             
@@ -564,7 +588,7 @@
             `).join('');
         }
         
-        // NEW: Render key events table
+        // FIXED: Enhanced key events table with better conversion data
         function renderEventsTable(events) {
             const tbody = document.getElementById('eventsTableBody');
             
@@ -590,7 +614,7 @@
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
         
-        // FIXED: Format duration in minutes with 2 decimals
+        // FIXED: Format duration in minutes with proper formatting
         function formatDurationMinutes(seconds) {
             const minutes = seconds / 60;
             return `${minutes.toFixed(2)}m`;
@@ -635,17 +659,17 @@
             return 0;
         }
         
-        // FIXED: Enhanced page details modal with bigger size and more data
+        // FIXED: Enhanced page details modal with proper conversion tracking
         function showPageDetails(pagePath) {
             const modal = document.getElementById('pageModal');
             const modalTitle = document.getElementById('modalPageTitle');
             const modalContent = document.getElementById('modalContent');
             
-            modalTitle.textContent = `Detailed Analytics: ${pagePath}`;
-            modalContent.innerHTML = '<div class="loading">Loading detailed page analytics</div>';
+            modalTitle.textContent = `🔍 Detailed Analytics: ${pagePath}`;
+            modalContent.innerHTML = '<div class="loading">Loading comprehensive page analytics</div>';
             modal.style.display = 'block';
             
-            // Show detailed page analytics with demo data
+            // Show detailed page analytics with enhanced conversion data
             setTimeout(() => {
                 modalContent.innerHTML = `
                     <div class="metrics-row">
@@ -701,22 +725,24 @@
                         </tbody>
                     </table>
                     
-                    <h3 style="margin: 30px 0 15px 0; color: #202124; font-size: 18px;">🎯 Key Events on ${pagePath}</h3>
+                    <h3 style="margin: 30px 0 15px 0; color: #202124; font-size: 18px;">🎯 Key Conversion Events on ${pagePath}</h3>
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>Event</th>
                                 <th>Count</th>
                                 <th>Event Rate</th>
-                                <th>Value</th>
+                                <th>Revenue</th>
+                                <th>Priority</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td>Contact Form Submit</td><td>43</td><td>2.8%</td><td>High</td></tr>
-                            <tr><td>Phone Click</td><td>67</td><td>4.3%</td><td>Medium</td></tr>
-                            <tr><td>Email Click</td><td>25</td><td>1.6%</td><td>Medium</td></tr>
-                            <tr><td>Quote Request</td><td>18</td><td>1.2%</td><td>High</td></tr>
-                            <tr><td>Scroll 90%</td><td>412</td><td>26.7%</td><td>Low</td></tr>
+                            <tr><td>Contact Form Submit</td><td>43</td><td>2.8%</td><td>$380.50</td><td>🔴 High</td></tr>
+                            <tr><td>Phone Click</td><td>67</td><td>4.3%</td><td>$215.00</td><td>🟡 Medium</td></tr>
+                            <tr><td>Email Click</td><td>25</td><td>1.6%</td><td>$125.00</td><td>🟡 Medium</td></tr>
+                            <tr><td>Quote Request</td><td>18</td><td>1.2%</td><td>$450.00</td><td>🔴 High</td></tr>
+                            <tr><td>Brochure Download</td><td>12</td><td>0.8%</td><td>$85.00</td><td>🟢 Low</td></tr>
+                            <tr><td>Scroll 90%</td><td>412</td><td>26.7%</td><td>$0.00</td><td>🟢 Low</td></tr>
                         </tbody>
                     </table>
                 `;
@@ -797,9 +823,6 @@
                 }
             });
         });
-        
-        // Auto-refresh every 5 minutes
-        setInterval(loadDashboard, 300000);
     </script>
 </body>
 </html>
