@@ -77,21 +77,21 @@
         .data-table tbody tr { cursor: pointer; transition: background 0.2s; }
         .data-table tbody tr:hover { background: #f8f9fa; }
         
-        /* Modal */
+        /* Modal - BIGGER SIZE */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
         .modal-content { 
             background-color: white; 
-            margin: 5% auto; 
+            margin: 2% auto; 
             padding: 0; 
             border-radius: 12px; 
-            width: 90%; 
-            max-width: 800px; 
-            max-height: 80vh; 
+            width: 95%; 
+            max-width: 1200px; 
+            max-height: 90vh; 
             overflow-y: auto;
             box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
         .modal-header { background: #1a73e8; color: white; padding: 20px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 20px; }
+        .modal-body { padding: 30px; }
         .close { color: white; font-size: 28px; font-weight: bold; cursor: pointer; }
         .close:hover { opacity: 0.7; }
         
@@ -122,6 +122,7 @@
             .date-controls { flex-direction: column; align-items: stretch; }
             .quick-dates { justify-content: center; }
             .container { padding: 10px; }
+            .modal-content { width: 98%; margin: 1% auto; }
         }
     </style>
 </head>
@@ -209,6 +210,27 @@
                 </tbody>
             </table>
         </div>
+        
+        <!-- Key Events Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-title">Key Events & Conversions</div>
+            </div>
+            <table class="data-table" id="eventsTable">
+                <thead>
+                    <tr>
+                        <th data-sort="event">Event Name</th>
+                        <th data-sort="count">Event Count</th>
+                        <th data-sort="users">Event Users</th>
+                        <th data-sort="rate">Event Rate</th>
+                        <th data-sort="revenue">Event Revenue</th>
+                    </tr>
+                </thead>
+                <tbody id="eventsTableBody">
+                    <tr><td colspan="5" class="loading">Loading events data</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
     
     <!-- Page Details Modal -->
@@ -246,16 +268,29 @@
         }
         
         function parseDate(dateStr) {
-            // Fix date parsing to prevent Invalid_Date - use proper date formatting
+            // FIXED: Better date parsing to prevent Invalid_Date in comparison mode
             try {
-                const date = new Date(dateStr + 'T00:00:00');
-                if (isNaN(date.getTime())) {
-                    // Fallback for invalid dates
-                    return 'Invalid Date';
+                if (!dateStr || dateStr === 'undefined') return 'Invalid';
+                
+                // Handle various date formats
+                let date;
+                if (dateStr.includes('-')) {
+                    date = new Date(dateStr + 'T00:00:00');
+                } else {
+                    date = new Date(dateStr);
                 }
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                
+                if (isNaN(date.getTime())) {
+                    return 'Invalid';
+                }
+                
+                return date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
             } catch (error) {
-                return 'Invalid Date';
+                console.error('Date parsing error:', error, dateStr);
+                return 'Invalid';
             }
         }
         
@@ -264,7 +299,7 @@
                 `Last updated: ${new Date().toLocaleString()}`;
         }
         
-        // Generate demo data for enhanced features display
+        // FIXED: Updated demo data with proper formatting
         function generateDemoData() {
             const days = 7;
             const dates = [];
@@ -284,16 +319,16 @@
                     { title: 'Page Views', value: 247, change: 15.2, changeDiff: 32 },
                     { title: 'Sessions', value: 158, change: 8.7, changeDiff: 13 },
                     { title: 'Users', value: 124, change: -3.1, changeDiff: -4 },
-                    { title: 'Bounce Rate', value: 65.4, change: -5.2, changeDiff: -3.6 },
-                    { title: 'Avg. Session Duration', value: 185, change: 12.3, changeDiff: 20 },
+                    { title: 'Bounce Rate', value: 61.7, change: -5.2, changeDiff: -3.6, isPercentage: true },  // FIXED: Now percentage
+                    { title: 'Avg. Session Duration', value: 4.20, change: 12.3, changeDiff: 0.33, isMinutes: true }, // FIXED: Now minutes
                     { title: 'Conversions', value: 8, change: 25.0, changeDiff: 2 },
-                    { title: 'Engagement Rate', value: 34.6, change: 7.8, changeDiff: 2.5 }
+                    { title: 'Engagement Rate', value: 38.3, change: 7.8, changeDiff: 2.5, isPercentage: true }  // FIXED: Now percentage
                 ],
                 chartData: {
                     labels: dates,
                     sessions: sessions,
                     pageviews: pageviews,
-                    previousSessions: isComparing ? sessions.map(s => s - Math.floor(Math.random() * 10)) : null
+                    previousSessions: isComparing ? sessions.map(s => Math.max(1, s - Math.floor(Math.random() * 10))) : null
                 },
                 topPages: [
                     { page: '/services', pageviews: 45, sessions: 32, users: 28, bounce_rate: 0.42, avg_duration: 195 },
@@ -308,6 +343,14 @@
                     { source: 'linkedin.com', medium: 'referral', sessions: 18, users: 16, pageviews: 29, bounce_rate: 0.33 },
                     { source: 'facebook.com', medium: 'social', sessions: 12, users: 10, pageviews: 18, bounce_rate: 0.58 },
                     { source: 'newsletter', medium: 'email', sessions: 8, users: 7, pageviews: 14, bounce_rate: 0.25 }
+                ],
+                // NEW: Key Events data
+                keyEvents: [
+                    { event: 'contact_form_submit', count: 15, users: 13, rate: 0.095, revenue: 0 },
+                    { event: 'phone_click', count: 23, users: 19, rate: 0.146, revenue: 0 },
+                    { event: 'email_click', count: 8, users: 7, rate: 0.051, revenue: 0 },
+                    { event: 'quote_request', count: 12, users: 11, rate: 0.076, revenue: 0 },
+                    { event: 'page_view', count: 247, users: 124, rate: 1.991, revenue: 0 }
                 ]
             };
         }
@@ -337,6 +380,7 @@
                 renderChart(currentData.chartData);
                 renderPagesTable(currentData.topPages);
                 renderSourcesTable(currentData.trafficSources);
+                renderEventsTable(currentData.keyEvents); // NEW: Render events table
                 
                 updateLastUpdated();
             } catch (error) {
@@ -351,6 +395,7 @@
         function updateTablesLoading() {
             document.getElementById('pagesTableBody').innerHTML = '<tr><td colspan="6" class="loading">Loading data</td></tr>';
             document.getElementById('sourcesTableBody').innerHTML = '<tr><td colspan="6" class="loading">Loading data</td></tr>';
+            document.getElementById('eventsTableBody').innerHTML = '<tr><td colspan="5" class="loading">Loading events data</td></tr>';
         }
         
         function renderMetrics(metrics) {
@@ -362,15 +407,32 @@
                     const changeClass = metric.change > 0 ? 'positive' : metric.change < 0 ? 'negative' : 'neutral';
                     const arrow = metric.change > 0 ? '↗' : metric.change < 0 ? '↘' : '→';
                     const changePercent = Math.abs(metric.change).toFixed(1);
+                    
+                    // Format change diff based on type
+                    let changeDiffFormatted = metric.changeDiff.toLocaleString();
+                    if (metric.isPercentage) {
+                        changeDiffFormatted = `${metric.changeDiff.toFixed(1)}%`;
+                    } else if (metric.isMinutes) {
+                        changeDiffFormatted = `${metric.changeDiff.toFixed(2)}m`;
+                    }
+                    
                     changeHtml = `<div class="metric-change ${changeClass}">
-                        ${arrow} ${changePercent}% (${metric.changeDiff > 0 ? '+' : ''}${metric.changeDiff.toLocaleString()})
+                        ${arrow} ${changePercent}% (${metric.changeDiff > 0 ? '+' : ''}${changeDiffFormatted})
                     </div>`;
+                }
+                
+                // FIXED: Format metric values properly
+                let displayValue = metric.value.toLocaleString();
+                if (metric.isPercentage) {
+                    displayValue = `${metric.value.toFixed(1)}%`;
+                } else if (metric.isMinutes) {
+                    displayValue = `${metric.value.toFixed(2)}m`;
                 }
                 
                 return `
                     <div class="metric-card">
                         <div class="metric-title">${metric.title}</div>
-                        <div class="metric-value">${metric.value.toLocaleString()}</div>
+                        <div class="metric-value">${displayValue}</div>
                         ${changeHtml}
                     </div>
                 `;
@@ -386,8 +448,11 @@
                 trafficChart.destroy();
             }
             
-            // Fix date parsing for chart labels
-            const labels = chartData.labels.map(label => parseDate(label));
+            // FIXED: Better date handling for charts in comparison mode
+            const labels = chartData.labels.map(label => {
+                const parsed = parseDate(label);
+                return parsed === 'Invalid' ? 'N/A' : parsed;
+            }).filter(label => label !== 'N/A');
             
             const datasets = [{
                 label: 'Sessions',
@@ -405,7 +470,7 @@
                 tension: 0.4
             }];
             
-            if (isComparing && chartData.previousSessions) {
+            if (isComparing && chartData.previousSessions && chartData.previousSessions.length > 0) {
                 datasets.push({
                     label: 'Previous Sessions',
                     data: chartData.previousSessions,
@@ -474,7 +539,7 @@
                     <td>${page.sessions.toLocaleString()}</td>
                     <td>${page.users.toLocaleString()}</td>
                     <td>${(page.bounce_rate * 100).toFixed(1)}%</td>
-                    <td>${formatDuration(page.avg_duration)}</td>
+                    <td>${formatDurationMinutes(page.avg_duration)}</td>
                 </tr>
             `).join('');
         }
@@ -499,10 +564,36 @@
             `).join('');
         }
         
+        // NEW: Render key events table
+        function renderEventsTable(events) {
+            const tbody = document.getElementById('eventsTableBody');
+            
+            if (!events || events.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">No events data available</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = events.map(event => `
+                <tr>
+                    <td>${event.event.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</td>
+                    <td>${event.count.toLocaleString()}</td>
+                    <td>${event.users.toLocaleString()}</td>
+                    <td>${(event.rate * 100).toFixed(1)}%</td>
+                    <td>$${event.revenue.toFixed(2)}</td>
+                </tr>
+            `).join('');
+        }
+        
         function formatDuration(seconds) {
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
             return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        // FIXED: Format duration in minutes with 2 decimals
+        function formatDurationMinutes(seconds) {
+            const minutes = seconds / 60;
+            return `${minutes.toFixed(2)}m`;
         }
         
         function showError(message) {
@@ -522,9 +613,9 @@
                 let valueB = cellB.textContent.trim();
                 
                 // Handle numeric values
-                if (!isNaN(parseFloat(valueA.replace(/[,%]/g, '')))) {
-                    valueA = parseFloat(valueA.replace(/[,%]/g, ''));
-                    valueB = parseFloat(valueB.replace(/[,%]/g, ''));
+                if (!isNaN(parseFloat(valueA.replace(/[,%m$]/g, '')))) {
+                    valueA = parseFloat(valueA.replace(/[,%m$]/g, ''));
+                    valueB = parseFloat(valueB.replace(/[,%m$]/g, ''));
                 }
                 
                 if (valueA < valueB) return direction === 'asc' ? -1 : 1;
@@ -544,13 +635,13 @@
             return 0;
         }
         
-        // Page details modal
+        // FIXED: Enhanced page details modal with bigger size and more data
         function showPageDetails(pagePath) {
             const modal = document.getElementById('pageModal');
             const modalTitle = document.getElementById('modalPageTitle');
             const modalContent = document.getElementById('modalContent');
             
-            modalTitle.textContent = `Analytics: ${pagePath}`;
+            modalTitle.textContent = `Detailed Analytics: ${pagePath}`;
             modalContent.innerHTML = '<div class="loading">Loading detailed page analytics</div>';
             modal.style.display = 'block';
             
@@ -570,29 +661,62 @@
                         </div>
                         <div class="metric-card">
                             <div class="metric-title">Avg. Time on Page</div>
-                            <div class="metric-value">2:34</div>
-                            <div class="metric-change positive">↗ 15.2% (+20s)</div>
+                            <div class="metric-value">4.17m</div>
+                            <div class="metric-change positive">↗ 15.2% (+0.33m)</div>
                         </div>
                         <div class="metric-card">
                             <div class="metric-title">Bounce Rate</div>
                             <div class="metric-value">34.2%</div>
                             <div class="metric-change positive">↘ 5.1% (-1.8%)</div>
                         </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Conversion Rate</div>
+                            <div class="metric-value">2.8%</div>
+                            <div class="metric-change positive">↗ 18.5% (+0.4%)</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-title">Exit Rate</div>
+                            <div class="metric-value">28.5%</div>
+                            <div class="metric-change negative">↗ 3.2% (+0.9%)</div>
+                        </div>
                     </div>
-                    <h3 style="margin: 20px 0 10px 0; color: #202124;">Traffic Sources for ${pagePath}</h3>
-                    <table class="data-table">
+                    
+                    <h3 style="margin: 30px 0 15px 0; color: #202124; font-size: 18px;">📊 Traffic Sources for ${pagePath}</h3>
+                    <table class="data-table" style="margin-bottom: 30px;">
                         <thead>
                             <tr>
                                 <th>Source</th>
+                                <th>Medium</th>
                                 <th>Sessions</th>
                                 <th>% of Total</th>
+                                <th>Bounce Rate</th>
+                                <th>Conversion Rate</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td>Organic Search</td><td>582</td><td>47.3%</td></tr>
-                            <tr><td>Direct</td><td>389</td><td>31.6%</td></tr>
-                            <tr><td>Referral</td><td>156</td><td>12.7%</td></tr>
-                            <tr><td>Social</td><td>103</td><td>8.4%</td></tr>
+                            <tr><td>google</td><td>organic</td><td>582</td><td>47.3%</td><td>32.1%</td><td>3.2%</td></tr>
+                            <tr><td>(direct)</td><td>(none)</td><td>389</td><td>31.6%</td><td>28.5%</td><td>2.1%</td></tr>
+                            <tr><td>linkedin.com</td><td>referral</td><td>156</td><td>12.7%</td><td>41.2%</td><td>1.9%</td></tr>
+                            <tr><td>facebook.com</td><td>social</td><td>103</td><td>8.4%</td><td>52.3%</td><td>1.5%</td></tr>
+                        </tbody>
+                    </table>
+                    
+                    <h3 style="margin: 30px 0 15px 0; color: #202124; font-size: 18px;">🎯 Key Events on ${pagePath}</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Count</th>
+                                <th>Event Rate</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Contact Form Submit</td><td>43</td><td>2.8%</td><td>High</td></tr>
+                            <tr><td>Phone Click</td><td>67</td><td>4.3%</td><td>Medium</td></tr>
+                            <tr><td>Email Click</td><td>25</td><td>1.6%</td><td>Medium</td></tr>
+                            <tr><td>Quote Request</td><td>18</td><td>1.2%</td><td>High</td></tr>
+                            <tr><td>Scroll 90%</td><td>412</td><td>26.7%</td><td>Low</td></tr>
                         </tbody>
                     </table>
                 `;
